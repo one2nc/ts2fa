@@ -27,6 +27,7 @@ Use the libray in your code that depends on SRE projects
 ## CLI
 
 $ ./ts2fa -email hello@trustingsocial.com -project tessellate
+```
 
 █████████████████████████████████████████████████████████
 █████████████████████████████████████████████████████████
@@ -57,5 +58,6 @@ $ ./ts2fa -email hello@trustingsocial.com -project tessellate
 ████▄▄▄▄▄▄▄█▄██▄▄▄▄▄█▄▄██▄▄███▄▄▄█▄▄▄█▄▄▄█▄█▄▄█▄███▄▄████
 █████████████████████████████████████████████████████████
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+```
 Enter OTP:
 ```
