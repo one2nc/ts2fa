@@ -82,13 +82,12 @@ func main() {
 	// display the QR code to the user.
 	displayQR(key.String())
 
-	log.Println(key.Secret())
-
 	for {
 		// Now Validate that the user's successfully added the passcode.
 		passcode := promptForPasscode()
 		valid := totp.Validate(passcode, key.Secret())
 		if valid {
+			log.Println("Secret:", key.Secret())
 			os.Exit(0)
 		}
 	}
