@@ -1,4 +1,4 @@
-# t2s2fa
+# ts2fa
 
 ## Libray
 
