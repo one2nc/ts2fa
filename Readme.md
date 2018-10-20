@@ -1,5 +1,4 @@
-# ts2fa
-
+# ts2fa [![Build Status](https://travis-ci.org/tsocial/ts2fa.svg?branch=master)](https://travis-ci.org/tsocial/ts2fa)
 ## Libray
 
 Use the libray in your code that depends on SRE projects
