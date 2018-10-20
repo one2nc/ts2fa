@@ -31,16 +31,16 @@ func NewPayload(path, key string, codes ...string) *Payload {
 	return &Payload{Path: path, Key: key, Codes: codes}
 }
 
-func (t *Ts2FA) SetRules(r Rules) {
-	t.rules = r
-}
-
-func (t *Ts2FA) SetValidator(v Validate) {
-	t.validator = v
-}
-
 func (t *Ts2FA) Verify(p *Payload) (bool, error) {
+	if p == nil {
+		return true, nil
+	}
+
 	rule, ok := t.rules[p.Path]
+	if !ok {
+		rule, ok = t.rules[DEFAULT]
+	}
+
 	if !ok {
 		return true, nil
 	}
@@ -70,10 +70,17 @@ func (t *Ts2FA) Verify(p *Payload) (bool, error) {
 }
 
 func New(c *Ts2FAConf) *Ts2FA {
-	v := c.Validator
-	if v == nil {
-		v = totp.Validate
+	if c == nil {
+		c = &Ts2FAConf{}
 	}
 
-	return &Ts2FA{rules: c.Rules, validator: v}
+	if c.Rules == nil {
+		c.Rules = Rules{}
+	}
+
+	if c.Validator == nil {
+		c.Validator = totp.Validate
+	}
+
+	return &Ts2FA{rules: c.Rules, validator: c.Validator}
 }
