@@ -12,8 +12,8 @@ type Rules map[string]map[string][]string
 type Validate func(token, secret string) bool
 
 type Ts2FAConf struct {
-	Rules     Rules `json:"rules"`
-	Validator Validate
+	Rules     Rules    `json:"rules"`
+	Validator Validate `json:"-"`
 }
 
 type Ts2FA struct {
