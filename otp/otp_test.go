@@ -1,7 +1,6 @@
 package ts2fa
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,7 +59,7 @@ func TestVerify(t *testing.T) {
 			t.Run("Invalid default secret", func(t *testing.T) {
 				ok, err := x.Verify(p)
 				assert.False(t, ok, "Should fail validation")
-				assert.Contains(t, err.Error(), fmt.Sprintf("validation failed for Secret: %v", secret))
+				assert.Contains(t, err.Error(), "validation failed for OTP")
 			})
 
 			t.Run("Valid default secret", func(t *testing.T) {
@@ -78,7 +77,7 @@ func TestVerify(t *testing.T) {
 				t.Run("Invalid secret", func(t *testing.T) {
 					ok, err := x.Verify(p)
 					assert.False(t, ok, "Should fail validation")
-					assert.Contains(t, err.Error(), fmt.Sprintf("validation failed for Secret: %v", secret))
+					assert.Contains(t, err.Error(), "validation failed for OTP")
 				})
 
 				t.Run("Valid secret", func(t *testing.T) {
@@ -102,7 +101,7 @@ func TestVerify(t *testing.T) {
 					p.Codes = []string{"12", "34"}
 					ok, err := x.Verify(p)
 					assert.False(t, ok, "Should fail validation")
-					assert.Contains(t, err.Error(), "validation failed for Secret:")
+					assert.Contains(t, err.Error(), "validation failed for OTP")
 				})
 			})
 		})

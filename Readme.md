@@ -16,7 +16,9 @@ Use the libray in your code that depends on SRE projects
 		Rules:     rules
 	})
 
-	valid, err := tfa.Verify(obj)
+
+	p := NewPayload("/missing", "key1", "12345")
+	valid, err := tfa.Verify(p)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ type Rules map[string]map[string][]string
 type Validate func(token, secret string) bool
 
 type Ts2FAConf struct {
-	Rules     Rules `json:"rule"`
+	Rules     Rules `json:"rules"`
 	Validator Validate
 }
 
@@ -62,7 +62,7 @@ func (t *Ts2FA) Verify(p *Payload) (bool, error) {
 
 	for ix, v := range validators {
 		if !t.validator(p.Codes[ix], v) {
-			return false, fmt.Errorf("validation failed for Secret: %v\n", v)
+			return false, fmt.Errorf("validation failed for OTP: %v\n", p.Codes[ix])
 		}
 	}
 
