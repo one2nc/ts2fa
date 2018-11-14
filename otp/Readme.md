@@ -1,30 +1,3 @@
-2FA config is a JSON hash that has the following structure.
-
-```json
-{
-  "Namespace/Ident": {
-    "Operation": ["array", "of", "tokens"]
-  }
-}
-```
-
-Example: If you wish to Protect Nomad Job called "hello-world"
-- Allow Get
-- A new deployment should have two stakeholders's OTP
-- Stop a Job could do with just one
-
-The totp config would look like:
-
-```json
-{
-  "hello-world": {
-    "*": [],
-    "POST": ["GA4DGMQ4TKZMFTDSNBUDEMZYMYYA", "GA4DGMQ4TKZMdedeqeSNBUDEMZYMYYA"],
-    "DELETE": ["GA4DGMQ4TKZMFTDSNBUDEMZYMYYA"]
-  }
-}
-```
-
 Verification library is independent of Nomad and Tessellate and can be utilized for any purpose which can leverage the same configuration structure.
 
 Example usage:
