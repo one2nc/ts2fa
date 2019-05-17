@@ -17,7 +17,7 @@ import (
 
 var pritunlUsers = []User{
 	{
-		Email:     "abc@xyz.com",
+		Email:     "abc@trustingsocial.com",
 		OtpSecret: "7VP7X6OC37YVIRVI",
 	},
 }
@@ -72,10 +72,11 @@ func TestValidate(t *testing.T) {
 	testServer := httptest.NewServer(m)
 
 	t.Run("data should be fetched on the first call", func(t *testing.T) {
+		t.Parallel()
 		req, err := http.NewRequest(http.MethodGet, testServer.URL+"/test", nil)
 		assert.Nil(t, err)
 
-		req.SetBasicAuth("abc@xyz.com", "123123")
+		req.SetBasicAuth("abc@trustingsocial.com", "123123")
 
 		c := http.Client{}
 
@@ -86,10 +87,11 @@ func TestValidate(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 		assert.NotNil(t, store)
-		assert.Equal(t, 1, len(store.Secrets))
+		assert.Equal(t, 1, len(store.secrets))
 	})
 
 	t.Run("should allow request with valid otp", func(t *testing.T) {
+		t.Parallel()
 		req, err := http.NewRequest(http.MethodGet, testServer.URL+"/test", nil)
 		assert.Nil(t, err)
 
@@ -107,6 +109,7 @@ func TestValidate(t *testing.T) {
 }
 
 func TestRefreshHandler(t *testing.T) {
+	t.Parallel()
 	m := mux.NewRouter()
 	m.HandleFunc("/refresh", RefreshHandler)
 
@@ -117,12 +120,12 @@ func TestRefreshHandler(t *testing.T) {
 
 	c := http.Client{}
 
-	assert.Equal(t, 1, len(store.Secrets))
-	pritunlUsers = append(pritunlUsers, User{"abc2@xyz.com", "secret"})
+	assert.Equal(t, 1, len(store.secrets))
+	pritunlUsers = append(pritunlUsers, User{"abc2@trustingsocial.com", "secret"})
 
 	_, err = c.Do(req)
 	assert.Nil(t, err)
-	assert.Equal(t, 2, len(store.Secrets))
+	assert.Equal(t, 2, len(store.secrets))
 }
 
 func respWrite(w http.ResponseWriter, resp []byte) {

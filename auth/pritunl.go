@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/sethgrid/pester"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -38,16 +39,18 @@ func fetchPritunlData() ([]User, error) {
 
 	pTimestamp := fmt.Sprintf("%d", time.Now().Unix())
 	pAuthNonce := strings.ReplaceAll(uuid.NewV4().String(), "-", "")
-	method := "GET"
+	method := http.MethodGet
 	path := fmt.Sprintf("/user/%s", orgId)
 	pAuthStr := strings.Join([]string{token, pTimestamp, pAuthNonce, method,
 		path}, "&")
 
 	// base64.b64encode(hmac.new(API_SECRET, auth_string, hashlib.sha256).digest())
 	hm := hmac.New(sha256.New, []byte(secret))
-	hm.Write([]byte(pAuthStr))
-	sum := hm.Sum(nil)
-	pAuthSignature := base64.StdEncoding.EncodeToString(sum)
+	if _, err := hm.Write([]byte(pAuthStr)); err != nil {
+		return nil, err
+	}
+
+	pAuthSignature := base64.StdEncoding.EncodeToString(hm.Sum(nil))
 
 	headers := map[string]string{
 		"Auth-Token":     token,
@@ -60,14 +63,20 @@ func fetchPritunlData() ([]User, error) {
 	//	MaxRetries: MaxRetries,
 	//}
 
-	c := http.Client{}
+	c := pester.New()
+	c.MaxRetries = MaxRetries
+	c.Backoff = pester.ExponentialBackoff
+	c.Timeout = 10*time.Second
 
 	url, err := url2.Parse(host + path)
 	if err != nil {
 		return nil, err
 	}
 
-	req, _ := http.NewRequest(method, url.String(), nil)
+	req, err := http.NewRequest(method, url.String(), nil)
+	if err != nil {
+		return nil, err
+	}
 
 	for k, v := range headers {
 		req.Header.Add(k, v)

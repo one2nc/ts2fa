@@ -3,7 +3,7 @@ deps:
 	dep ensure -v
 
 test: deps
-	go test -v ./...
+	go test -v -race ./...
 
 build_linux: deps
 	env GOOS=linux CGO_ENABLED=0 go build -o ts2fa -a -installsuffix cgo \

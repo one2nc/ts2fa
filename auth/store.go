@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"gopkg.in/go-playground/validator.v9"
 	"log"
 	"sync"
 
@@ -8,33 +9,59 @@ import (
 )
 
 type User struct {
-	Email     string `json:"email"`
-	OtpSecret string `json:"otp_secret"`
+	Email     string `json:"email" validate:"required,email,endswith=trustingsocial.com"`
+	OtpSecret string `json:"otp_secret" validate:"required"`
 }
 
 type secretStore struct {
 	sync.RWMutex
-	Secrets map[string]string
+	secrets map[string]string
 }
 
 var store *secretStore
+var lock sync.RWMutex
 
-func (s *secretStore) Update(users []User) {
+func initStore() error {
+	lock.Lock()
+	defer lock.Unlock()
+
+	if store != nil {
+		return nil
+	}
+
+	store = &secretStore{
+		secrets: make(map[string]string),
+	}
+
+	data, err := fetchPritunlData()
+	if err != nil {
+		return err
+	}
+	store.update(data)
+
+	return nil
+}
+
+func (s *secretStore) update(users []User) {
 	s.Lock()
 	defer s.Unlock()
 
-	if s.Secrets == nil {
-		s.Secrets = make(map[string]string)
+	if s.secrets == nil {
+		s.secrets = make(map[string]string)
 	}
 
+	validate := validator.New()
+
 	for _, u := range users {
-		if u.Email != "" && u.OtpSecret != "" {
-			s.Secrets[u.Email] = u.OtpSecret
+
+		err := validate.Struct(u)
+		if u.Email != "" && u.OtpSecret != "" && err == nil {
+			s.secrets[u.Email] = u.OtpSecret
 		}
 	}
 }
 
-func (s *secretStore) IsValid(e, t string) bool {
+func (s *secretStore) isValid(e, t string) bool {
 	if e == "" || t == "" {
 		return false
 	}
@@ -42,9 +69,9 @@ func (s *secretStore) IsValid(e, t string) bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	secret, ok := s.Secrets[e]
+	secret, ok := s.secrets[e]
 	if !ok {
-		log.Println("otp-validation-error: secret not found")
+		log.Printf("otp-validation-error: secret not found for %s", e)
 		return false
 	}
 
