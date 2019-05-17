@@ -3,12 +3,12 @@ deps:
 	dep ensure -v
 
 test: deps
-	go test -v ./...
+	env GOCACHE=/tmp/gocache go test -v -race ./...
 
 build_linux: deps
-	env GOOS=linux CGO_ENABLED=0 go build -o ts2fa -a -installsuffix cgo \
+	env GOCACHE=/tmp/gocache GOOS=linux CGO_ENABLED=0 go build -o ts2fa -a -installsuffix cgo \
 		github.com/tsocial/ts2fa/cli
 
 build_mac: deps
-	env GOOS=darwin CGO_ENABLED=0 go build -o ts2fa -a -installsuffix cgo \
+	env GOCACHE=/tmp/gocache GOOS=darwin CGO_ENABLED=0 go build -o ts2fa -a -installsuffix cgo \
 		github.com/tsocial/ts2fa/cli

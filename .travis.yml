@@ -3,5 +3,8 @@ language: go
 go:
   - "1.10"
 
+before_install:
+  - eval "$(gimme 1.12)"
+
 script:
   - make test
