@@ -16,6 +16,7 @@ func Validate(f http.Handler) http.Handler {
 			lock.RUnlock()
 			if err := initStore(); err != nil {
 				http.Error(w, fmt.Sprintf("init-store-error: %+v", err), http.StatusInternalServerError)
+				return
 			}
 		}
 
@@ -25,6 +26,7 @@ func Validate(f http.Handler) http.Handler {
 
 		if email, token, ok := r.BasicAuth(); !ok || !store.isValid(email, token) {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
 		}
 
 		f.ServeHTTP(w, r)
@@ -36,6 +38,7 @@ func RefreshHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := fetchPritunlData()
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
 	store.update(data)
 

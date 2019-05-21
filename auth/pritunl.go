@@ -66,7 +66,7 @@ func fetchPritunlData() ([]User, error) {
 	c := pester.New()
 	c.MaxRetries = MaxRetries
 	c.Backoff = pester.ExponentialBackoff
-	c.Timeout = 10*time.Second
+	c.Timeout = 60*time.Second
 
 	url, err := url2.Parse(host + path)
 	if err != nil {
