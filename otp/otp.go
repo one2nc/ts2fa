@@ -1,72 +1,82 @@
 package ts2fa
 
 import (
-	"fmt"
-
-	"github.com/pquerna/otp/totp"
+	"github.com/tsocial/ts2fa/storage"
+	"log"
 )
 
 const DEFAULT = "*"
 
-type Rules map[string]map[string][]string
-type Validate func(token, secret string) bool
+type Rule struct {
+	Emails []string `json:"emails"`
+	WhitelistedIPs []string `json:"whitelisted_ips"`
+}
+
+type Rules map[string]map[string]Rule
 
 type Ts2FAConf struct {
 	Rules     Rules    `json:"rules"`
-	Validator Validate `json:"-"`
 }
 
 type Ts2FA struct {
 	rules     Rules
-	validator Validate
 }
 
 type Payload struct {
 	Path  string
 	Key   string
-	Codes []string
+	SourceIP string
+	Email string
+	Otp string
 }
 
-func NewPayload(path, key string, codes ...string) *Payload {
-	return &Payload{Path: path, Key: key, Codes: codes}
+func NewPayload(p, k, s, e, o string) *Payload {
+	return &Payload{p, k, s, e, o}
 }
 
-func (t *Ts2FA) Verify(p *Payload) (bool, error) {
+func (t *Ts2FA) Verify(p *Payload) bool {
 	if p == nil {
-		return true, nil
+		return true
 	}
 
-	rule, ok := t.rules[p.Path]
+	log.Println(p)
+
+	action, ok := t.rules[p.Path]
 	if !ok {
-		rule, ok = t.rules[DEFAULT]
+		action, ok = t.rules[DEFAULT]
 	}
 
 	if !ok {
-		return true, nil
+		return true
 	}
 
-	validators, ok := rule[p.Key]
+	rule, ok := action[p.Key]
 	if !ok {
-		validators, ok = rule[DEFAULT]
+		rule, ok = action[DEFAULT]
 	}
 
-	if !ok || len(validators) == 0 {
-		return true, nil
+	if len(rule.WhitelistedIPs) == 0 && len(rule.Emails) == 0 {
+		return true
 	}
 
-	if len(validators) != len(p.Codes) {
-		return false, fmt.Errorf(
-			"invalid no. of Tokens passed. Expected %v got %v",
-			len(validators), len(p.Codes))
-	}
-
-	for ix, v := range validators {
-		if !t.validator(p.Codes[ix], v) {
-			return false, fmt.Errorf("validation failed for OTP: %v\n", p.Codes[ix])
+	if p.Email != "" && p.Otp != "" && len(rule.Emails) > 0 {
+		log.Println(rule.Emails)
+		for _, e := range rule.Emails {
+			if e == p.Email {
+				return storage.IsValid(p.Email, p.Otp)
+			}
 		}
 	}
 
-	return true, nil
+	if p.SourceIP != "" {
+		for _, w := range rule.WhitelistedIPs {
+			if w == p.SourceIP {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 func New(c *Ts2FAConf) *Ts2FA {
@@ -78,9 +88,10 @@ func New(c *Ts2FAConf) *Ts2FA {
 		c.Rules = Rules{}
 	}
 
-	if c.Validator == nil {
-		c.Validator = totp.Validate
+	if err := storage.InitStore(); err != nil {
+		log.Println(err)
+		return nil
 	}
 
-	return &Ts2FA{rules: c.Rules, validator: c.Validator}
+	return &Ts2FA{rules: c.Rules}
 }

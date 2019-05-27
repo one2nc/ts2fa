@@ -1,4 +1,4 @@
-package auth
+package storage
 
 import (
 	"gopkg.in/go-playground/validator.v9"
@@ -21,16 +21,26 @@ type secretStore struct {
 var store *secretStore
 var lock sync.RWMutex
 
-func initStore() error {
-	lock.Lock()
-	defer lock.Unlock()
+func InitStore() error {
+	lock.RLock()
 
 	if store != nil {
+		lock.RUnlock()
 		return nil
 	}
 
-	store = &secretStore{
-		secrets: make(map[string]string),
+	lock.RUnlock()
+	return Refresh()
+}
+
+func Refresh() error {
+	lock.Lock()
+	defer lock.Unlock()
+
+	if store == nil {
+		store = &secretStore{
+			secrets: make(map[string]string),
+		}
 	}
 
 	data, err := fetchPritunlData()
@@ -40,6 +50,10 @@ func initStore() error {
 	store.update(data)
 
 	return nil
+}
+
+func IsValid(e, t string) bool {
+	return store.isValid(e, t)
 }
 
 func (s *secretStore) update(users []User) {
@@ -74,6 +88,8 @@ func (s *secretStore) isValid(e, t string) bool {
 		log.Printf("otp-validation-error: secret not found for %s", e)
 		return false
 	}
+
+	log.Println(t, secret)
 
 	return totp.Validate(t, secret)
 }

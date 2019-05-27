@@ -1,121 +1,96 @@
 package ts2fa
 
 import (
+	"fmt"
+	"github.com/tsocial/ts2fa/storage"
+	"log"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/pquerna/otp/totp"
 )
 
+var pritunlUsers = []storage.User{
+		{
+			Email:     "abc@trustingsocial.com",
+			OtpSecret: "7VP7X6OC37YVIRVI",
+		},
+		{
+			Email:     "123@trustingsocial.com",
+			OtpSecret: "GMYDQN3GGVRWIY3CMNQWINLFGE3DQOJUHFRDOM3DHBSWEZDGGVRA",
+		},
+	}
+
 func TestMain(m *testing.M) {
-	m.Run()
+	log.SetFlags(log.LstdFlags)
+	storage.PritunlMockServer(pritunlUsers)
+	os.Exit(m.Run())
 }
 
 func TestNew(t *testing.T) {
 	x := New(nil)
-	t.Run("Should have default validator", func(t *testing.T) {
-		assert.NotNil(t, x.validator)
-	})
-
 	t.Run("Should have empty rules", func(t *testing.T) {
 		assert.NotNil(t, x.rules)
 	})
 }
 
 func TestVerify(t *testing.T) {
-	secret, token, v := TestValidator(totp.Validate)
-
 	rules := Rules{
-		"/test": map[string][]string{
-			"key1":  []string{secret},
-			DEFAULT: []string{"secret1", "secret2"},
+		"/test": map[string]Rule{
+			"key1":  {
+				Emails: []string{"abc@trustingsocial.com"},
+			},
+			DEFAULT: {
+				Emails: []string{"abc@trustingsocial.com"},
+			},
 		},
-		"/foo": map[string][]string{
-			DEFAULT: []string{},
+		"/foo": map[string]Rule{
+			DEFAULT: {WhitelistedIPs: []string{"1.1.1.1"}},
 		},
-		DEFAULT: map[string][]string{
-			DEFAULT: []string{secret},
+		DEFAULT: map[string]Rule{
+			DEFAULT: {Emails: []string{"123@trustingsocial.com"}},
 		},
 	}
 
-	x := New(&Ts2FAConf{Rules: rules, Validator: v})
-
+	log.Println(pritunlUsers)
+	x := New(&Ts2FAConf{Rules: rules})
+	log.Println(pritunlUsers)
 	t.Run("Verify against a nil paylod", func(t *testing.T) {
-		ok, err := x.Verify(nil)
-		t.Run("Err should not ne nil", func(t *testing.T) {
-			assert.Nil(t, err, "Error should be nil")
-		})
-
-		t.Run("Ok should be true", func(t *testing.T) {
-			assert.True(t, ok, "Validation should pass")
-		})
+		assert.True(t, x.Verify(nil), "Validation should pass")
 	})
 
 	t.Run("Verify a payload", func(t *testing.T) {
 		t.Run("Missing path catches default", func(t *testing.T) {
-			p := NewPayload("/missing", "key1", "12345")
+			p := NewPayload("/missing", "key1", "", "123@trustingsocial.com", "12345")
 
 			t.Run("Invalid default secret", func(t *testing.T) {
-				ok, err := x.Verify(p)
-				assert.False(t, ok, "Should fail validation")
-				assert.Contains(t, err.Error(), "validation failed for OTP")
+				assert.False(t, x.Verify(p), "Should fail validation")
 			})
 
 			t.Run("Valid default secret", func(t *testing.T) {
-				p.Codes = []string{token}
-				ok, err := x.Verify(p)
-				assert.True(t, ok)
-				assert.Nil(t, err)
+				p.Otp, _ = totp.GenerateCode(pritunlUsers[1].OtpSecret, time.Now())
+				assert.True(t, x.Verify(p), fmt.Sprintf("%+v", pritunlUsers[1]))
 			})
 		})
 
 		t.Run("/test", func(t *testing.T) {
 			t.Run("key1", func(t *testing.T) {
-				p := NewPayload("/test", "key1", "12345")
+				p := NewPayload("/test", "key1", "", "abc@trustingsocial.com", "12345")
 
 				t.Run("Invalid secret", func(t *testing.T) {
-					ok, err := x.Verify(p)
-					assert.False(t, ok, "Should fail validation")
-					assert.Contains(t, err.Error(), "validation failed for OTP")
+					assert.False(t, x.Verify(p), "Should fail validation")
 				})
 
 				t.Run("Valid secret", func(t *testing.T) {
-					p.Codes = []string{token}
-					ok, err := x.Verify(p)
-					assert.True(t, ok)
-					assert.Nil(t, err)
-				})
-			})
-
-			t.Run("Default key", func(t *testing.T) {
-				p := NewPayload("/test", "key2", "12345")
-
-				t.Run("Insufficient tokens", func(t *testing.T) {
-					ok, err := x.Verify(p)
-					assert.False(t, ok, "Should fail validation")
-					assert.Contains(t, err.Error(), "Expected 2 got 1")
-				})
-
-				t.Run("Sufficient but incorrect codes", func(t *testing.T) {
-					p.Codes = []string{"12", "34"}
-					ok, err := x.Verify(p)
-					assert.False(t, ok, "Should fail validation")
-					assert.Contains(t, err.Error(), "validation failed for OTP")
+					p.Otp, _ = totp.GenerateCode(pritunlUsers[0].OtpSecret, time.Now())
+					assert.True(t, x.Verify(p))
 				})
 			})
 		})
 
-		t.Run("/foo", func(t *testing.T) {
-			t.Run("Any key", func(t *testing.T) {
-				p := NewPayload("/foo", "key2", "12345")
-
-				t.Run("No token needed", func(t *testing.T) {
-					ok, err := x.Verify(p)
-					assert.True(t, ok)
-					assert.Nil(t, err)
-				})
-			})
-		})
 	})
 }
+

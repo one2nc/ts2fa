@@ -1,0 +1,9 @@
+{
+  "rules": {
+    "/sample": {
+      "GET": {
+        "emails": ["abc@trustingsocial.com"]
+      }
+    }
+  }
+}

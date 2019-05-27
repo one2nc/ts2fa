@@ -1,30 +1,40 @@
 package auth
 
 import (
-	"fmt"
+	"encoding/json"
+	"github.com/tsocial/ts2fa/otp"
+	"github.com/tsocial/ts2fa/storage"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 )
 
 
 func Validate(f http.Handler) http.Handler {
+	configPath := os.Getenv("TOTP_CONFIG")
+	if configPath == "" {
+		panic("TOTP_CONFIG env is not set")
+	}
+
+	configBytes, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		panic("cannot read TOTP_CONFIG file")
+	}
+
+	var c ts2fa.Ts2FAConf
+
+	if err := json.Unmarshal(configBytes, &c); err != nil {
+		panic("cannot unmarshal TOTP_CONFIG")
+	}
+
+	t := ts2fa.New(&c)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lock.RLock()
-		var startup bool
-		if store == nil {
-			startup = true
-			lock.RUnlock()
-			if err := initStore(); err != nil {
-				http.Error(w, fmt.Sprintf("init-store-error: %+v", err), http.StatusInternalServerError)
-				return
-			}
-		}
+		email, token, _ := r.BasicAuth()
+		o := ts2fa.NewPayload(r.URL.Path, r.Method, r.RemoteAddr, email, token)
 
-		if !startup {
-			defer lock.RUnlock()
-		}
-
-		if email, token, ok := r.BasicAuth(); !ok || !store.isValid(email, token) {
+		if !t.Verify(o) {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
@@ -35,12 +45,11 @@ func Validate(f http.Handler) http.Handler {
 
 // Fetch data from pritunl and update userStore
 func RefreshHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := fetchPritunlData()
-	if err != nil {
+	if err := storage.Refresh(); err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	store.update(data)
+
 
 	if _, err := w.Write([]byte(`{"success": true}`)); err != nil {
 		log.Printf("response-write-error: %+v", err)
